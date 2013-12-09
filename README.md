@@ -15,7 +15,7 @@ source git-aliases.bash
 Run the following to rebase your repository against `upstream`:
 
 ```bash
-./rebase-repo.sh
+<path to>/rebase-repo.sh
 ```
 
 > **NOTE:** Assumes you have already set up an upstream repo with the following:
