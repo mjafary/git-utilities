@@ -1,0 +1,4 @@
+*.sw[opqrst]
+*__pycache__*
+*~
+
