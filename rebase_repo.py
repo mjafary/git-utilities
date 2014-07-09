@@ -17,16 +17,26 @@ class App:
     and allows rebasing for the upstream
     """
 
-    startingbranch = ''
-
     def __init__(self):
         """
         Initializes all of the current repository information
-        and runs the gui
         """
 
+        # Set some defaults
+        self.startingbranch = ''
+        self.root = Tk()
+        self.remotenames = []
+        self.rebaseremote = StringVar()
+
+        self.rebasecurrentbranch = IntVar()
+        self.rebasecurrentbranch.set(0)
+
+        self.pushtoorigin = IntVar()
+        self.pushtoorigin.set(1)
+
+        # Gather required information
         self.getcurrentbranchname()
-        self.creategui()
+        self.getremotenames()
 
     def getcurrentbranchname(self):
         """
@@ -36,31 +46,48 @@ class App:
         branchname = re.compile(r"^On branch (?P<branchname>.*?)\n")
         try:
             # Run the git status command
-            p1 = Popen(['git', 'status'], stdout=PIPE)
-            output = p1.communicate()[0]
+            p = Popen(['git', 'status'], stdout=PIPE)
+            output = p.communicate()[0]
             self.startingbranch = branchname\
                 .search(output.decode('utf-8')).group('branchname')
         except CalledProcessError:
             sys.stderr.write("Unable to get current branch name\n")
             sys.exit(1)
 
-    def printoptions(self, mystring):
-        """
-        Debugging to check selection is correct
-        """
-        print(mystring)
-    
-    def quit(self):
+    def quit(self, exitcode=0):
         """
         Quits the current application
         """
-        sys.exit(0)
-    
+        sys.exit(exitcode)
+
     def rebase(self):
         """
         Rebases the using the given options
         """
-        sys.exit(0)
+
+        # Debugging - Print out the known variables
+        print('Starting Branch', self.startingbranch)
+        print('Known remotes: ', ", ".join(self.remotenames))
+        print('Rebase to the following remote: ', self.rebaseremote.get())
+        print('Rebase my current branch as well?: ',
+              self.rebasecurrentbranch.get())
+        print('Push to my origin repo?: ', self.pushtoorigin.get())
+
+        self.quit()
+
+    def getremotenames(self):
+        """
+        Glean the git remote repos from the system
+        """
+
+        try:
+            # Run the git status command
+            p = Popen(['git', 'remote'], stdout=PIPE)
+            output = p.communicate()[0]
+            self.remotenames = output.decode('utf-8').split()
+        except CalledProcessError:
+            sys.stderr.write("Unable to get remote repo names\n")
+            sys.exit(1)
 
     def creategui(self):
         """
@@ -68,70 +95,82 @@ class App:
         """
 
         # Set up the root window
-        root = Tk()
-        root.title(self.startingbranch)
+        self.root.title(self.startingbranch)
 
-        mainframe = ttk.Frame(root, padding="3 3 12 12")
+        mainframe = ttk.Frame(self.root, padding="3 3 12 12")
         mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
         mainframe.columnconfigure(0, weight=1)
         mainframe.rowconfigure(0, weight=1)
 
         # Notify of the current branch
         ttk.Label(mainframe, text='Current Branch:').grid(
-        column=1, row=1, sticky=(W, E))
-        ttk.Label(mainframe, text=self.startingbranch, foreground='red').grid(
-        column=2, row=1, sticky=(W, E))
+            column=1,
+            row=1,
+            sticky=(W, E)
+        )
+        ttk.Label(
+            mainframe,
+            text=self.startingbranch,
+            foreground='red').grid(
+                column=2,
+                row=1,
+                sticky=(W, E))
 
         # Remote to rebase against
-        rebaseremote = StringVar()
         ttk.Label(mainframe,
                   text='Rebase Against:')\
             .grid(column=1, row=2, sticky=(W, E))
 
         cb1 = ttk.Combobox(mainframe,
-                           textvariable=rebaseremote,
-                           values=['upstream', 'origin'],
+                           textvariable=self.rebaseremote,
+                           values=self.remotenames,
                            state='readonly')
-        cb1.current(0)
         cb1.grid(column=2,
                  row=2,
                  sticky=(W, E))
 
-        # If we are not on master, see if user wants to 
+        # If upstream exists, set it to the default
+        if 'upstream' in self.remotenames:
+            cb1.set('upstream')
+        else:
+            cb1.current(0)
+
+        # If we are not on master, see if user wants to
         # rebase the current branch as well
-        rebasecurrentbranch = IntVar()
         ttk.Label(mainframe,
                   text='Rebase Current Branch?')\
                   .grid(column=1,
                         row=3,
                         sticky=W)
         cb2 = ttk.Checkbutton(mainframe,
-                              variable=rebasecurrentbranch)
+                              variable=self.rebasecurrentbranch)
         cb2.grid(column=2, row=3, sticky=E)
 
         # If the default branch is master, set it to 1, and
         # make it readonly
         if self.startingbranch == 'master':
-            rebasecurrentbranch.set(1)
+            self.rebasecurrentbranch.set(1)
             cb2.configure(state='disabled')
-            
+
         # Push to our origin after rebase?
-        pushtoorigin = IntVar()
-        pushtoorigin.set(1)
         ttk.Label(mainframe,
                   text='Push to Origin?')\
                   .grid(column=1, row=4, sticky=W)
         cb3 = ttk.Checkbutton(mainframe,
-                              variable=pushtoorigin)
+                              variable=self.pushtoorigin)
         cb3.grid(column=2,
                  row=4,
                  sticky=E)
 
         # Add buttons at the bottom
-        ttk.Button(mainframe, text='Quit', command=quit)\
+        ttk.Button(mainframe,
+                   text='Quit',
+                   command=self.quit)\
             .grid(column=1, row=5, sticky=W)
 
-        ttk.Button(mainframe, text='Rebase', command=quit)\
+        ttk.Button(mainframe,
+                   text='Rebase',
+                   command=self.rebase)\
             .grid(column=2, row=5, sticky=E)
 
         # feet = StringVar()
@@ -161,10 +200,10 @@ class App:
         # feet_entry.focus()
         # root.bind('<Return>', calculate)
 
-
-        root.mainloop()
+        self.root.mainloop()
 
 if __name__ == '__main__':
 
     app = App()
+    app.creategui()
 
