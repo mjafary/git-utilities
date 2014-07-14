@@ -118,6 +118,11 @@ class App:
                 + "/master\n")
             sys.exit(1)
 
+        # Push master back to origin
+        if self.pushtoorigin.get() == 1:
+            self.update_status('Pushing master to origin repo')
+            self.push_branch()
+
         # Go back to our initial branch
         if self.startingbranch != 'master':
             self.checkout(self.startingbranch)
@@ -129,7 +134,7 @@ class App:
                         [
                             'git',
                             'rebase',
-                            self.rebaseremote.get() + '/master'
+                            'master'
                         ],
                         stdout=PIPE
                     )
@@ -138,11 +143,9 @@ class App:
                 except CalledProcessError:
                     sys.stderr.write(
                         "Unable to rebase to "\
-                        + self.rebaseremote.get()\
-                        + "/master\n"
+                        + "master\n"
                     )
                     sys.exit(1)
-
 
         self.update_status('Complete')
 
@@ -210,6 +213,24 @@ class App:
             except CalledProcessError:
                 sys.stderr.write("Unable to checkout " + branchname + "\n")
                 self.quit(1)
+
+    def push_branch(self):
+        """
+        Pushes the currently checked out branch up to the origin
+        """
+
+        # First check that the branch exists
+        self.update_status('Pushing branch to origin')
+        try:
+            # Run the git status command
+            p1 = Popen(['git', 'push'])
+            output = p1.communicate()[0]
+            if p1.returncode != 0:
+                sys.stderr.write("Unable to push branch\n")
+                self.quit(1)
+        except CalledProcessError:
+            sys.stderr.write("Unable to push branch\n")
+            self.quit(1)
 
     def run(self):
         """
