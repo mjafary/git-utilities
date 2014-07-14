@@ -24,6 +24,7 @@ class App:
 
         # Set some defaults
         self.startingbranch = ''
+        self.localbranches = []
         self.root = Tk()
         self.remotenames = []
         self.currentstatus = StringVar()
@@ -51,8 +52,8 @@ class App:
         branchname = re.compile(r"^On branch (?P<branchname>.*?)\n")
         try:
             # Run the git status command
-            p = Popen(['git', 'status'], stdout=PIPE)
-            output = p.communicate()[0]
+            p1 = Popen(['git', 'status'], stdout=PIPE)
+            output = p1.communicate()[0]
             self.startingbranch = branchname\
                 .search(output.decode('utf-8')).group('branchname')
         except CalledProcessError:
@@ -65,11 +66,10 @@ class App:
         """
 
         self.update_status('Getting list of local branches')
-        branchname = re.compile(r"(?P<branchname>.*?)\n")
         try:
             # Run the git status command
-            p = Popen(['git', 'branch'], stdout=PIPE)
-            output = p.communicate()[0]
+            p1 = Popen(['git', 'branch'], stdout=PIPE)
+            output = p1.communicate()[0]
             self.localbranches = output.decode('utf-8').replace('*', '').split()
         except CalledProcessError:
             sys.stderr.write("Unable to get current branch name\n")
@@ -89,20 +89,6 @@ class App:
         # Disable buttons
         self.quit_button['state'] = 'disabled'
         self.rebase_button['state'] = 'disabled'
-
-        # Debugging - Print out the known variables
-        print('Starting Branch', self.startingbranch)
-        print('Known remotes: ', ", ".join(self.remotenames))
-        print(
-            'Rebase to the following remote: ',
-            self.rebaseremote.get()
-        )
-        print(
-            'Rebase my current branch as well?: ',
-            self.rebasecurrentbranch.get()
-        )
-        print('Push to my origin repo?: ', self.pushtoorigin.get())
-
         self.update_status('Checking out master branch')
 
         # Go to our master branch if we are not already there
@@ -115,7 +101,7 @@ class App:
 
         try:
             # Run the master rebase
-            p = Popen(
+            p1 = Popen(
                 [
                     'git',
                     'rebase',
@@ -123,7 +109,7 @@ class App:
                 ],
                 stdout=PIPE
             )
-            output = p.communicate()[0]
+            output = p1.communicate()[0]
 
         except CalledProcessError:
             sys.stderr.write(
@@ -137,11 +123,9 @@ class App:
             self.checkout(self.startingbranch)
 
             if self.rebasecurrentbranch.get() == 1:
-                # Rebase our old branch too
-                print('Rebasing the current branch too')
                 try:
                     # Run the master rebase
-                    p = Popen(
+                    p1 = Popen(
                         [
                             'git',
                             'rebase',
@@ -149,7 +133,7 @@ class App:
                         ],
                         stdout=PIPE
                     )
-                    output = p.communicate()[0]
+                    output = p1.communicate()[0]
                     self.remotenames = output.decode('utf-8').split()
                 except CalledProcessError:
                     sys.stderr.write(
@@ -175,7 +159,7 @@ class App:
 
         self.currentstatus.set(statusmessage)
         self.root.update()
-        
+
     def getremotenames(self):
         """
         Glean the git remote repos from the system
@@ -199,9 +183,9 @@ class App:
         if remotename in self.remotenames:
             try:
                 # Run the git status command
-                p = Popen(['git', 'fetch', '--prune', remotename])
-                output = p.communicate()[0]
-                if p.returncode != 0:
+                p1 = Popen(['git', 'fetch', '--prune', remotename])
+                output = p1.communicate()[0]
+                if p1.returncode != 0:
                     sys.stderr.write("Unable to update " + remotename + "\n")
                     self.quit(1)
             except CalledProcessError:
@@ -209,23 +193,23 @@ class App:
                 self.quit(1)
 
     def checkout(self, branchname):
-       """
-       Changes the current repo into the nominated branch
-       """
+        """
+        Changes the current repo into the nominated branch
+        """
 
-       # First check that the branch exists
-       if branchname in self.localbranches:
-           self.update_status('Checking out ' + branchname)
-           try:
-               # Run the git status command
-               p = Popen(['git', 'checkout', branchname])
-               output = p.communicate()[0]
-               if p.returncode != 0:
-                   sys.stderr.write("Unable to checkout " + branchname + "\n")
-                   self.quit(1)
-           except CalledProcessError:
-               sys.stderr.write("Unable to checkout " + branchname + "\n")
-               self.quit(1)
+        # First check that the branch exists
+        if branchname in self.localbranches:
+            self.update_status('Checking out ' + branchname)
+            try:
+                # Run the git status command
+                p1 = Popen(['git', 'checkout', branchname])
+                output = p1.communicate()[0]
+                if p1.returncode != 0:
+                    sys.stderr.write("Unable to checkout " + branchname + "\n")
+                    self.quit(1)
+            except CalledProcessError:
+                sys.stderr.write("Unable to checkout " + branchname + "\n")
+                self.quit(1)
 
     def run(self):
         """
@@ -354,33 +338,6 @@ class App:
             mainframe.columnconfigure(x, weight=1)
         for y in range(8):
             mainframe.rowconfigure(y, weight=1)
-
-        # feet = StringVar()
-        # meters = StringVar()
-
-        # feet_entry = ttk.Entry(mainframe,
-        #                        width=7,
-        #                        textvariable=feet)
-        # feet_entry.grid(column=2, row=1, sticky=(W, E))
-
-        # ttk.Label(mainframe, textvariable=meters).grid(
-        # column=2, row=2, sticky=(W, E))
-        # ttk.Button(
-        # mainframe, text="Calculate", command=calculate).grid(
-        # column=3, row=3, sticky=W)
-
-        # ttk.Label(mainframe, text="feet").grid(column=3, row=1, sticky=W)
-        # ttk.Label(mainframe,
-        #           text="is equivalent to")\
-        #          .grid(column=1, row=2, sticky=E)
-        # ttk.Label(mainframe, text="meters")\
-        #          .grid(column=3, row=2, sticky=W)
-
-        # for child in mainframe.winfo_children():
-        #     child.grid_configure(padx=5, pady=5)
-
-        # feet_entry.focus()
-        # root.bind('<Return>', calculate)
 
         self.root.mainloop()
 
