@@ -10,6 +10,7 @@
 REBASE_CURRENT_BRANCH=0
 
 GIT_BASE_DIR=`/usr/bin/git rev-parse --show-toplevel`
+GREP=`which grep`
 
 # Function to print the headers
 print_header () {
@@ -22,7 +23,7 @@ print_header () {
 clear
 
 # Get the current branch
-STARTING_BRANCH=`/usr/bin/git branch | /bin/grep '*' | /usr/bin/awk '{print $2}'`
+STARTING_BRANCH=`/usr/bin/git branch | $GREP '*' | /usr/bin/awk '{print $2}'`
 
 # If we are not in the master branch, check that we should be rebasing
 if [ "${STARTING_BRANCH}" != 'master' ]; then
